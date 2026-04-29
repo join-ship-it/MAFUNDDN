@@ -17,9 +17,41 @@ const navItems = [
   { href: "/learning", label: "Learning", icon: "📚" },
 ];
 
+function DbIndicator({ status }: { status: import("@/store/simulationStore").DbStatus }) {
+  if (status === "unconfigured") return null;
+  return (
+    <div className="flex items-center gap-1.5">
+      {status === "loading" && (
+        <>
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <span className="text-[9px] text-blue-500">connecting</span>
+        </>
+      )}
+      {status === "saving" && (
+        <>
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-[9px] text-amber-500">saving</span>
+        </>
+      )}
+      {status === "synced" && (
+        <>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          <span className="text-[9px] text-emerald-600">synced</span>
+        </>
+      )}
+      {status === "error" && (
+        <>
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+          <span className="text-[9px] text-red-500">sync error</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
-  const { state, resetSimulation } = useSimulation();
+  const { state, dbStatus, resetSimulation } = useSimulation();
   const [confirmReset, setConfirmReset] = useState(false);
 
   const openTasks = state.tasks.filter((t) => t.status === "open").length;
@@ -40,8 +72,13 @@ export function Sidebar() {
     <aside className="flex h-screen w-56 flex-col border-r border-[#1e2d4a] bg-[#080d1c]">
       {/* Logo */}
       <div className="border-b border-[#1e2d4a] px-4 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500">PE Fund</p>
-        <p className="text-sm font-semibold text-slate-100">Simulator</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500">PE Fund</p>
+            <p className="text-sm font-semibold text-slate-100">Simulator</p>
+          </div>
+          <DbIndicator status={dbStatus} />
+        </div>
       </div>
 
       {/* Fund summary */}

@@ -7,10 +7,13 @@ import React, {
   useCallback,
   useState,
   useEffect,
+  useRef,
 } from "react";
 import type { SimulationState, Task, EventFeedItem, DealStage, LPStatus } from "@/lib/types";
 import { INITIAL_STATE } from "@/lib/seedData";
 import { addDays, isBefore } from "@/lib/dateUtils";
+import { supabase } from "@/lib/supabase/client";
+import { loadStateFromSupabase, saveStateToSupabase } from "@/lib/supabase/sync";
 
 // ─── Notification (toast) types ──────────────────────────────────────────────
 
@@ -19,6 +22,10 @@ export interface Notification {
   type: "success" | "error" | "warning" | "info";
   message: string;
 }
+
+// ─── DB sync status ───────────────────────────────────────────────────────────
+
+export type DbStatus = "unconfigured" | "loading" | "synced" | "saving" | "error";
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
@@ -33,6 +40,7 @@ type Action =
   | { type: "LOG_LP_CONTACT"; payload: { lpId: string; note: string } }
   | { type: "LOG_BANKER_CONTACT"; payload: { bankerId: string } }
   | { type: "ADD_TASK"; payload: Omit<Task, "id" | "status"> }
+  | { type: "HYDRATE"; payload: SimulationState }
   | { type: "RESET" };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -351,6 +359,9 @@ function simulationReducer(state: SimulationState, action: Action): SimulationSt
     case "ADD_EVENT":
       return { ...state, eventFeed: [action.payload, ...state.eventFeed] };
 
+    case "HYDRATE":
+      return action.payload;
+
     case "RESET":
       return INITIAL_STATE;
 
@@ -382,11 +393,24 @@ function saveState(state: SimulationState): void {
   }
 }
 
+// ─── userId helper ────────────────────────────────────────────────────────────
+
+function getOrCreateUserId(): string {
+  if (typeof window === "undefined") return "ssr-placeholder";
+  const key = "pe-sim-user-id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const newId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  localStorage.setItem(key, newId);
+  return newId;
+}
+
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 export interface SimulationContextValue {
   state: SimulationState;
   notifications: Notification[];
+  dbStatus: DbStatus;
   dismissNotification: (id: string) => void;
   // Time controls
   advanceDays: (days: number) => void;
@@ -413,10 +437,49 @@ const SimulationContext = createContext<SimulationContextValue | null>(null);
 export function SimulationProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(simulationReducer, undefined, loadState);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [dbStatus, setDbStatus] = useState<DbStatus>(supabase ? "loading" : "unconfigured");
+  const userIdRef = useRef<string>("");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Persist on every state change (no-op on SSR since saveState guards typeof window)
+  // On mount: try to load state from Supabase; fall back to localStorage (already loaded)
+  useEffect(() => {
+    if (!supabase) return;
+    const userId = getOrCreateUserId();
+    userIdRef.current = userId;
+    setDbStatus("loading");
+    loadStateFromSupabase(userId).then((loaded) => {
+      if (loaded) {
+        dispatch({ type: "HYDRATE", payload: loaded });
+        setDbStatus("synced");
+      } else {
+        // No Supabase record yet — seed it from current localStorage state
+        setDbStatus("saving");
+        saveStateToSupabase(userId, state)
+          .then(() => setDbStatus("synced"))
+          .catch(() => setDbStatus("error"));
+      }
+    }).catch(() => setDbStatus("error"));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist to localStorage immediately, Supabase with 1.5 s debounce
   useEffect(() => {
     saveState(state);
+
+    if (!supabase) return;
+    if (!userIdRef.current) {
+      userIdRef.current = getOrCreateUserId();
+    }
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      setDbStatus("saving");
+      saveStateToSupabase(userIdRef.current, state)
+        .then(() => setDbStatus("synced"))
+        .catch(() => setDbStatus("error"));
+    }, 1500);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [state]);
 
   function notify(type: Notification["type"], message: string) {
@@ -532,7 +595,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <SimulationContext.Provider value={{
-      state, notifications, dismissNotification,
+      state, notifications, dbStatus, dismissNotification,
       advanceDays, advanceToDate, advanceToNextDeadline, advanceToNextMajorEvent,
       completeTask, addTask,
       advanceDealStage, passDeal,
