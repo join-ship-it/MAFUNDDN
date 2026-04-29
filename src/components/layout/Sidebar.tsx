@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
+import { useState } from "react";
 import { useSimulation } from "@/store/simulationStore";
 
 const navItems = [
@@ -18,10 +19,22 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { state } = useSimulation();
+  const { state, resetSimulation } = useSimulation();
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const openTasks = state.tasks.filter((t) => t.status === "open").length;
   const missedTasks = state.tasks.filter((t) => t.status === "missed").length;
+  const pct = Math.min(100, (state.fund.committedCapital / state.fund.targetSize) * 100);
+
+  function handleReset() {
+    if (confirmReset) {
+      resetSimulation();
+      setConfirmReset(false);
+    } else {
+      setConfirmReset(true);
+      setTimeout(() => setConfirmReset(false), 4000);
+    }
+  }
 
   return (
     <aside className="flex h-screen w-56 flex-col border-r border-[#1e2d4a] bg-[#080d1c]">
@@ -31,27 +44,31 @@ export function Sidebar() {
         <p className="text-sm font-semibold text-slate-100">Simulator</p>
       </div>
 
-      {/* Fund name */}
+      {/* Fund summary */}
       <div className="border-b border-[#1e2d4a] px-4 py-3">
         <p className="text-[10px] uppercase tracking-wider text-slate-500">Active Fund</p>
-        <p className="mt-0.5 text-xs font-semibold text-slate-300">{state.fund.name}</p>
-        <div className="mt-1.5 flex items-center gap-1">
+        <p className="mt-0.5 text-xs font-semibold text-slate-300 leading-tight">{state.fund.name}</p>
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-slate-600">
+              ${state.fund.committedCapital}M / ${state.fund.targetSize}M
+            </span>
+            <span className="text-[10px] text-slate-500">{pct.toFixed(0)}%</span>
+          </div>
           <div className="h-1 flex-1 rounded-full bg-[#1a2540]">
             <div
-              className="h-1 rounded-full bg-blue-500"
-              style={{ width: `${Math.min(100, (state.fund.committedCapital / state.fund.targetSize) * 100)}%` }}
+              className="h-1 rounded-full bg-blue-500 transition-all duration-500"
+              style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-[10px] text-slate-500">
-            {Math.round((state.fund.committedCapital / state.fund.targetSize) * 100)}%
-          </span>
         </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         {navItems.map((item) => {
-          const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+          const active =
+            pathname === item.href || (pathname?.startsWith(item.href + "/") ?? false);
           return (
             <Link
               key={item.href}
@@ -85,13 +102,21 @@ export function Sidebar() {
         <div>
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-wider text-slate-500">Reputation</span>
-            <span className={clsx("text-xs font-bold", state.reputationScore >= 70 ? "text-emerald-400" : state.reputationScore >= 40 ? "text-amber-400" : "text-red-400")}>
+            <span className={clsx(
+              "text-xs font-bold",
+              state.reputationScore >= 70 ? "text-emerald-400" :
+              state.reputationScore >= 40 ? "text-amber-400" : "text-red-400"
+            )}>
               {state.reputationScore}
             </span>
           </div>
           <div className="mt-1 h-1 rounded-full bg-[#1a2540]">
             <div
-              className={clsx("h-1 rounded-full", state.reputationScore >= 70 ? "bg-emerald-500" : state.reputationScore >= 40 ? "bg-amber-500" : "bg-red-500")}
+              className={clsx(
+                "h-1 rounded-full transition-all duration-500",
+                state.reputationScore >= 70 ? "bg-emerald-500" :
+                state.reputationScore >= 40 ? "bg-amber-500" : "bg-red-500"
+              )}
               style={{ width: `${state.reputationScore}%` }}
             />
           </div>
@@ -102,9 +127,27 @@ export function Sidebar() {
             <span className="text-xs font-bold text-blue-400">{state.modelingSkillScore}</span>
           </div>
           <div className="mt-1 h-1 rounded-full bg-[#1a2540]">
-            <div className="h-1 rounded-full bg-blue-500" style={{ width: `${state.modelingSkillScore}%` }} />
+            <div
+              className="h-1 rounded-full bg-blue-500 transition-all duration-500"
+              style={{ width: `${state.modelingSkillScore}%` }}
+            />
           </div>
         </div>
+      </div>
+
+      {/* Reset */}
+      <div className="border-t border-[#1e2d4a] px-4 py-3">
+        <button
+          onClick={handleReset}
+          className={clsx(
+            "w-full rounded border px-3 py-1.5 text-[11px] font-medium transition-colors",
+            confirmReset
+              ? "border-red-700 bg-red-900/40 text-red-300"
+              : "border-[#1e2d4a] text-slate-600 hover:border-slate-600 hover:text-slate-400"
+          )}
+        >
+          {confirmReset ? "⚠ Click again to confirm reset" : "Reset Simulation"}
+        </button>
       </div>
     </aside>
   );
