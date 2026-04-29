@@ -309,7 +309,55 @@ export const SEED_DEALS: Deal[] = [
   },
 ];
 
+// ─── Sample deadline tasks demonstrating the time system ─────────────────────
+// These four tasks are intentionally short-dated so advancing time past them
+// demonstrates the deadline evaluation + missed-task consequences mechanic.
+
+export const SAMPLE_DEADLINE_TASKS: Task[] = [
+  {
+    id: "deadline-1",
+    title: "LP follow-up email — Vantage Point Capital",
+    description: "Send James Cho a quick update: fund progress, two new LOIs in flight, re-confirm soft commit timeline. Due tomorrow.",
+    category: "fundraising",
+    priority: "high",
+    status: "open",
+    dueDate: "2026-04-30", // +1 day from sim start
+    linkedLPId: "lp-3",
+  },
+  {
+    id: "deadline-2",
+    title: "Submit IOI — Apex Field Services",
+    description: "Preliminary indication of interest to Lincoln International. Proposed EV range $50–56M. Needs GP sign-off before submission.",
+    category: "deal",
+    priority: "high",
+    status: "open",
+    dueDate: "2026-05-03", // +4 days
+    linkedDealId: "deal-1",
+  },
+  {
+    id: "deadline-3",
+    title: "IC Memo — Summit Environmental Services",
+    description: "Investment Committee memo covering thesis, management assessment, LBO returns, risks and mitigants. Full IC scheduled May 6.",
+    category: "deal",
+    priority: "high",
+    status: "open",
+    dueDate: "2026-05-06", // +7 days
+    linkedDealId: "deal-5",
+  },
+  {
+    id: "deadline-4",
+    title: "Lender call — senior debt financing for Summit Environmental",
+    description: "Intro call with Golub Capital and Antares to discuss leverage package for Summit. 4.5x senior / 5.5x total targeted.",
+    category: "deal",
+    priority: "medium",
+    status: "open",
+    dueDate: "2026-05-09", // +10 days
+    linkedDealId: "deal-5",
+  },
+];
+
 export const SEED_TASKS: Task[] = [
+  ...SAMPLE_DEADLINE_TASKS,
   {
     id: "task-1",
     title: "Finalize QofE scope for Apex Field Services",

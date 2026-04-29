@@ -361,7 +361,7 @@ function simulationReducer(state: SimulationState, action: Action): SimulationSt
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
 
-const STORAGE_KEY = "pe-sim-state-v1";
+const STORAGE_KEY = "pe-sim-state-v3"; // bump to pick up new sample deadline tasks
 
 function loadState(): SimulationState {
   if (typeof window === "undefined") return INITIAL_STATE;
