@@ -20,7 +20,7 @@ export default function LandingPage() {
           <span className="ml-2 text-sm font-semibold text-slate-100">Simulator</span>
         </div>
         <Link
-          href="/dashboard"
+          href="/onboarding"
           className="rounded border border-blue-600 bg-blue-600 hover:bg-blue-500 px-4 py-1.5 text-sm font-semibold text-white transition-colors"
         >
           Launch Simulator →
@@ -43,7 +43,7 @@ export default function LandingPage() {
         </p>
         <div className="flex items-center justify-center gap-4">
           <Link
-            href="/dashboard"
+            href="/onboarding"
             className="rounded-lg border border-blue-500 bg-blue-600 hover:bg-blue-500 px-8 py-3 text-base font-bold text-white transition-all hover:shadow-lg hover:shadow-blue-900/50"
           >
             Start Simulation →

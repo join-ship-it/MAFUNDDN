@@ -430,6 +430,7 @@ export interface SimulationContextValue {
   logBankerContact: (bankerId: string) => void;
   // Meta
   resetSimulation: () => void;
+  initializeFund: (newState: SimulationState) => void;
 }
 
 const SimulationContext = createContext<SimulationContextValue | null>(null);
@@ -593,6 +594,12 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     notify("warning", "Simulation reset to initial state");
   }, []);
 
+  const initializeFund = useCallback((newState: SimulationState) => {
+    dispatch({ type: "HYDRATE", payload: newState });
+    try { localStorage.setItem("pe-sim-onboarded-v1", "true"); } catch { /* ignore */ }
+    notify("success", `${newState.fund.name} launched — Week 1, Day 1`);
+  }, []);
+
   return (
     <SimulationContext.Provider value={{
       state, notifications, dbStatus, dismissNotification,
@@ -602,6 +609,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       advanceLPStatus, logLPContact,
       logBankerContact,
       resetSimulation,
+      initializeFund,
     }}>
       {children}
     </SimulationContext.Provider>
